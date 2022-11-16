@@ -1,0 +1,92 @@
+[   307.567] 
+X.Org X Server 1.20.11
+X Protocol Version 11, Revision 0
+[   307.568] Build Operating System: linux Debian
+[   307.568] Current Operating System: Linux BTT-CB1 5.16.17-sun50iw9 #2.2.1 SMP Thu Nov 10 09:22:26 HKT 2022 aarch64
+[   307.568] Kernel command line: root=UUID=e7cf0c45-7ecd-429f-a80e-31fa4bb6dffc rootwait rootfstype=ext4 bootsplash.bootfile=bootsplash.armbian console=ttyS0,115200 console=tty1 consoleblank=0 loglevel=7 ubootpart=3da803e9-01 usb-storage.quirks=   cgroup_enable=memory swapaccount=1
+[   307.569] Build Date: 05 August 2022  08:00:36AM
+[   307.569] xorg-server 2:1.20.11-1+deb11u2 (https://www.debian.org/support) 
+[   307.569] Current version of pixman: 0.40.0
+[   307.569] 	Before reporting problems, check http://wiki.x.org
+	to make sure that you have the latest version.
+[   307.569] Markers: (--) probed, (**) from config file, (==) default setting,
+	(++) from command line, (!!) notice, (II) informational,
+	(WW) warning, (EE) error, (NI) not implemented, (??) unknown.
+[   307.569] (==) Log file: "/home/biqu/.local/share/xorg/Xorg.0.log", Time: Sat Nov 12 05:52:56 2022
+[   307.570] (==) Using system config directory "/usr/share/X11/xorg.conf.d"
+[   307.571] (==) No Layout section.  Using the first Screen section.
+[   307.571] (==) No screen section available. Using defaults.
+[   307.571] (**) |-->Screen "Default Screen Section" (0)
+[   307.572] (**) |   |-->Monitor "<default monitor>"
+[   307.573] (==) No monitor specified for screen "Default Screen Section".
+	Using a default monitor configuration.
+[   307.573] (==) Automatically adding devices
+[   307.573] (==) Automatically enabling devices
+[   307.573] (==) Automatically adding GPU devices
+[   307.573] (==) Max clients allowed: 256, resource mask: 0x1fffff
+[   307.573] (WW) The directory "/usr/share/fonts/X11/misc" does not exist.
+[   307.573] 	Entry deleted from font path.
+[   307.573] (WW) The directory "/usr/share/fonts/X11/cyrillic" does not exist.
+[   307.573] 	Entry deleted from font path.
+[   307.574] (WW) The directory "/usr/share/fonts/X11/100dpi/" does not exist.
+[   307.574] 	Entry deleted from font path.
+[   307.574] (WW) The directory "/usr/share/fonts/X11/75dpi/" does not exist.
+[   307.574] 	Entry deleted from font path.
+[   307.574] (WW) The directory "/usr/share/fonts/X11/Type1" does not exist.
+[   307.574] 	Entry deleted from font path.
+[   307.574] (WW) The directory "/usr/share/fonts/X11/100dpi" does not exist.
+[   307.574] 	Entry deleted from font path.
+[   307.574] (WW) The directory "/usr/share/fonts/X11/75dpi" does not exist.
+[   307.574] 	Entry deleted from font path.
+[   307.574] (==) FontPath set to:
+	built-ins
+[   307.574] (==) ModulePath set to "/usr/lib/xorg/modules"
+[   307.574] (II) The server relies on udev to provide the list of input devices.
+	If no devices become available, reconfigure udev or disable AutoAddDevices.
+[   307.574] (II) Loader magic: 0xaaaad5bfee28
+[   307.574] (II) Module ABI versions:
+[   307.574] 	X.Org ANSI C Emulation: 0.4
+[   307.574] 	X.Org Video Driver: 24.1
+[   307.574] 	X.Org XInput driver : 24.1
+[   307.574] 	X.Org Server Extension : 10.0
+[   307.577] (--) using VT number 2
+
+[   307.577] (II) systemd-logind: logind integration requires -keeptty and -keeptty was not provided, disabling logind integration
+[   307.580] (II) xfree86: Adding drm device (/dev/dri/card0)
+[   307.592] (II) no primary bus or device found
+[   307.592] 	falling back to /sys/devices/platform/display-engine/drm/card0
+[   307.592] (II) LoadModule: "glx"
+[   307.593] (II) Loading /usr/lib/xorg/modules/extensions/libglx.so
+[   307.597] (II) Module glx: vendor="X.Org Foundation"
+[   307.597] 	compiled for 1.20.11, module version = 1.0.0
+[   307.598] 	ABI class: X.Org Server Extension, version 10.0
+[   307.598] (==) Matched modesetting as autoconfigured driver 0
+[   307.598] (==) Matched fbdev as autoconfigured driver 1
+[   307.598] (==) Assigned the driver to the xf86ConfigLayout
+[   307.598] (II) LoadModule: "modesetting"
+[   307.598] (II) Loading /usr/lib/xorg/modules/drivers/modesetting_drv.so
+[   307.599] (II) Module modesetting: vendor="X.Org Foundation"
+[   307.599] 	compiled for 1.20.11, module version = 1.20.11
+[   307.599] 	Module class: X.Org Video Driver
+[   307.599] 	ABI class: X.Org Video Driver, version 24.1
+[   307.599] (II) LoadModule: "fbdev"
+[   307.600] (II) Loading /usr/lib/xorg/modules/drivers/fbdev_drv.so
+[   307.600] (II) Module fbdev: vendor="X.Org Foundation"
+[   307.600] 	compiled for 1.20.0, module version = 0.5.0
+[   307.600] 	Module class: X.Org Video Driver
+[   307.600] 	ABI class: X.Org Video Driver, version 24.0
+[   307.600] (II) modesetting: Driver for Modesetting Kernel Drivers: kms
+[   307.600] (II) FBDEV: driver for framebuffer: fbdev
+[   307.601] (EE) 
+Fatal server error:
+[   307.601] (EE) xf86OpenConsole: Cannot open virtual console 2 (Permission denied)
+[   307.601] (EE) 
+[   307.601] (EE) 
+Please consult the The X.Org Foundation support 
+	 at http://wiki.x.org
+ for help. 
+[   307.601] (EE) Please also check the log file at "/home/biqu/.local/share/xorg/Xorg.0.log" for additional information.
+[   307.601] (EE) 
+[   307.601] (WW) xf86CloseConsole: KDSETMODE failed: Bad file descriptor
+[   307.601] (WW) xf86CloseConsole: VT_GETMODE failed: Bad file descriptor
+[   307.601] (EE) Server terminated with error (1). Closing log file.
