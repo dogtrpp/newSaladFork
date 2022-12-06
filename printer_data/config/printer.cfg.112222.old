@@ -23,6 +23,8 @@
 
 [include klicky.cfg]
 
+[include macros/pause_resume.cfg]
+
 [exclude_object]
 
 [printer]
@@ -46,9 +48,12 @@ path: /home/biqu/printer_data/gcodes
 restart_method: command
 serial: /dev/serial/by-id/usb-Klipper_stm32g0b1xx_430036000C504B4633373520-if00
 
-##EBB36 Toolhead Board
 [mcu can0]
 canbus_uuid: 8b807351c67e
+
+#[mcu display]
+#serial:/dev/serial/by-id/usb-Klipper_stm32f042x6_260035001343565730313120-if00
+#restart_method: command
 
 ## ADXL345
 [adxl345]
@@ -65,18 +70,16 @@ accel_chip: adxl345
 probe_points:
     80,80,20
 
-## can0 Temp
+## can0
 [temperature_sensor CANBOARD]
 sensor_type: temperature_mcu
 sensor_mcu: can0
 
-## CB1 Temp
 [temperature_sensor CB1]
 sensor_type: temperature_host
 min_temp: 10
 max_temp: 100
 
-## MCU Temp
 [temperature_sensor MCU_temp]
 sensor_type: temperature_mcu
 min_temp: 0
@@ -102,7 +105,7 @@ step_pin: PE2
 dir_pin: PB4
 enable_pin: !PC11
 rotation_distance: 32
-microsteps: 32
+microsteps: 128
 full_steps_per_rotation:200  #set to 400 for 0.9 degree stepper
 endstop_pin: ^can0:PB6
 position_min: 0
@@ -116,7 +119,7 @@ homing_positive_dir: true
 [tmc2209 stepper_x]
 uart_pin: PC10
 interpolate: False
-run_current: 1.1
+run_current: 0.8
 sense_resistor: 0.110
 #stealthchop_threshold: 0
 
@@ -128,7 +131,7 @@ step_pin: PF12
 dir_pin: PF11
 enable_pin: !PB3
 rotation_distance: 32
-microsteps: 32
+microsteps: 128
 full_steps_per_rotation:200  #set to 400 for 0.9 degree stepper
 endstop_pin: ^PF3
 position_min: 0
@@ -143,7 +146,7 @@ homing_positive_dir: true
 [tmc2209 stepper_y]
 uart_pin: PF13
 interpolate: False
-run_current: 1.1
+run_current: 0.5
 sense_resistor: 0.110
 #stealthchop_threshold: 0
  
@@ -160,7 +163,7 @@ dir_pin: !PD6
 enable_pin: !PF10
 # Rotation Distance for TR8x8 = 8, TR8x4 = 4, TR8x2 = 2
 rotation_distance: 8    
-microsteps: 16
+microsteps: 32
 endstop_pin: ^PF4
 ##  Z-position of nozzle (in mm) to z-endstop trigger point relative to print surface (Z0)
 ##  (+) value = endstop above Z0, (-) value = endstop below
@@ -179,7 +182,7 @@ full_steps_per_rotation: 200	#200 for 1.8 degree, 400 for 0.9 degree
 [tmc2209 stepper_z]
 uart_pin: PF9
 interpolate: False
-run_current: 0.7
+run_current: 0.37
 sense_resistor: 0.110
 #stealthchop_threshold: 0
 
@@ -191,14 +194,14 @@ dir_pin: !PD2
 enable_pin: !PD5
 # Rotation Distance for TR8x8 = 8, TR8x4 = 4, TR8x2 = 2
 rotation_distance: 8  
-microsteps: 16
+microsteps: 32
 full_steps_per_rotation: 200	#200 for 1.8 degree, 400 for 0.9 degree
 
 ##  Make sure to update below for your relevant driver (2208 or 2209)
 [tmc2209 stepper_z1]
 uart_pin: PD4
 interpolate: False
-run_current: 0.7
+run_current: 0.37
 sense_resistor: 0.110
 #stealthchop_threshold: 0
 
@@ -210,14 +213,14 @@ dir_pin: !PC8
 enable_pin: !PD1
 # Rotation Distance for TR8x8 = 8, TR8x4 = 4, TR8x2 = 2
 rotation_distance: 8  
-microsteps: 16
+microsteps: 32
 full_steps_per_rotation: 200	#200 for 1.8 degree, 400 for 0.9 degree
 
 ##  Make sure to update below for your relevant driver (2208 or 2209)
 [tmc2209 stepper_z2]
 uart_pin: PD0
 interpolate: False
-run_current: 0.7
+run_current: 0.37
 sense_resistor: 0.110
 #stealthchop_threshold: 0
 
@@ -249,7 +252,7 @@ filament_diameter: 1.75
 heater_pin: can0:PB13
 ## Check what thermistor type you have. See https://www.klipper3d.org/Config_Reference.html#common-thermistors for common thermistor types.
 ## Use "Generic 3950" for NTC 100k 3950 thermistors
-sensor_type: PT1000
+sensor_type: Generic 3950
 sensor_pin: can0:PA3
 min_temp: 10
 max_temp: 270
@@ -270,7 +273,7 @@ max_extrude_cross_section: .740
 [tmc2209 extruder]
 uart_pin: can0:PA15
 interpolate: false
-run_current: 0.7
+run_current: 0.3
 sense_resistor: 0.110
 #stealthchop_threshold: 0
 
@@ -310,12 +313,12 @@ pin: can0:PB8
 x_offset: 0
 y_offset: 25.0
 z_offset: 5.350
-speed: 5
+speed: 10.0
 samples: 3
 samples_result: median
 sample_retract_dist: 3.0
-samples_tolerance: 0.006
-samples_tolerance_retries: 5
+samples_tolerance: 0.01
+samples_tolerance_retries: 10
 
 #####################################################################
 #   Fan Control
@@ -407,17 +410,17 @@ points:
 #   Specify coordinates of the nozzle and be sure the probe is above
 #   the bed at the given nozzle coordinates. This parameter must be
 #   provided.
-    20, 0
-    80, 105
-    140, 0
+    15,10
+    80, 110
+    143, 0
 
-speed: 150
+speed: 100
 #   The speed (in mm/s) of non-probing moves during the calibration.
 #   The default is 50.
-horizontal_move_z: 25
+horizontal_move_z: 15
 #   The height (in mm) that the head should be commanded to move to
 #   just prior to starting a probe operation. The default is 5.
-retries: 5
+retries: 15
 #   Number of times to retry if the probed points aren't within
 #   tolerance.
 retry_tolerance: 0.0075
@@ -434,25 +437,25 @@ retry_tolerance: 0.0075
 
 [bed_mesh]
 #   The speed (in mm/s) of non-probing moves during the calibration.
-speed: 150
+speed: 250
 
 #   The height (in mm) that the head should be commanded to move to
 #   just prior to starting a probe operation. The default is 5.
-horizontal_move_z: 25
+horizontal_move_z: 15
 
 #   Defines the minimum x,y coordinate of the mesh for rectangular
 #   beds. This coordinate is relative to the probe's location. This
 #   will be the first point probed, nearest to the origin. This
 #   parameter must be provided for rectangular beds.
 mesh_min:
-    15, 30
+    15, 25
 
 #   Defines the maximum x,y coordinate of the mesh for rectangular
 #   beds. Adheres to the same principle as mesh_min, however this will
 #   be the furthest point probed from the bed's origin. This parameter
 #   must be provided for rectangular beds.
 mesh_max:
-    145, 130
+    143, 135
 
 probe_count:
     3,3
@@ -572,9 +575,11 @@ gcode:
 [gcode_macro G29]
 gcode:
     Z_TILT_ADJUST
+    G28
+#    SCREWS_TILT_CALCULATE MAX_DEVIATION=0.1
     G1 Z10 F600
-#    BED_MESH_CLEAR
-#    BED_MESH_CALIBRATE
+    BED_MESH_CLEAR
+    BED_MESH_CALIBRATE
     BED_MESH_PROFILE LOAD=default
 
 # prime the nozzle 
@@ -610,70 +615,16 @@ gcode:
     G1 E-5.0 F1000
     G1 X5 Y5 F6000                               
     G90                                        
-        G1 X{printer.toolhead.axis_maximum.x} Y{printer.toolhead.axis_maximum.y} F19500.0  					; park nozzle at rear
+    #Present print
+    G1 X20 Y200 F6000
     #Disable heaters
     M106 S0                                      
     M104 S0                                       
     M140 S0
+    SET_GCODE_OFFSET Z=0
     #Disable teppers
     M84 X Y E
     M117 Complete!
-
-######################################################################
-# Filament Change
-######################################################################
-
-# M600: Filament Change. This macro will pause the printer, move the
-# tool to the change position, and retract the filament 50mm. Adjust
-# the retraction settings for your own extruder. After filament has
-# been changed, the print can be resumed from its previous position
-# with the "RESUME" gcode.
-
-[pause_resume]
-
-[gcode_macro M600]
-gcode:
-    {% set X = params.X|default(50)|float %}
-    {% set Y = params.Y|default(0)|float %}
-    {% set Z = params.Z|default(10)|float %}
-    SAVE_GCODE_STATE NAME=M600_state
-    PAUSE
-    G91
-    G1 E-.8 F2700
-    G1 Z{Z}
-    G90
-    G1 X{X} Y{Y} F3000
-    G91
-    G1 E-50 F1000
-    RESTORE_GCODE_STATE NAME=M600_state
-
-
-[gcode_macro PARK]
-gcode:
-    G1 X125 Y200.0 Z200.0 F4000
-[gcode_macro FILAMENT_LOAD]
-gcode:
-    M83 ; set e to relative positioning
-    G92 E0.0
-    G1 E80 F500 ; Initially go fast
-    G92 E0.0
-    G1 E20 F100 ; then go slow
-    G92 E0.0
- 
-[gcode_macro FILAMENT_UNLOAD]
-gcode:
-    M83 ; set e to relative positioning
-    # wiggle filament out of the nozzle
-    G1 E0.5 F1000
-    G1 E-0.5 F1000
-    G1 E1.0 F1000
-    G1 E-1.0 F1000
-    G1 E1.5 F1000
-    G1 E-1.5 F1000
-    G1 E2.0 F1000
- 
-    G1 E-100 F500 ;fully unload
-    G92 E0.0
 
 #*# <---------------------- SAVE_CONFIG ---------------------->
 #*# DO NOT EDIT THIS BLOCK OR BELOW. The contents are auto-generated.
@@ -686,32 +637,32 @@ gcode:
 #*#
 #*# [extruder]
 #*# control = pid
-#*# pid_kp = 24.193
-#*# pid_ki = 2.179
-#*# pid_kd = 67.136
+#*# pid_kp = 21.917
+#*# pid_ki = 1.571
+#*# pid_kd = 76.438
 #*#
 #*# [stepper_z]
-#*# position_endstop = 8.510
+#*# position_endstop = 9.192
 #*#
 #*# [bed_mesh default]
 #*# version = 1
 #*# points =
-#*# 	  0.042500, 0.020000, 0.070000
-#*# 	  0.032500, 0.000000, 0.037500
-#*# 	  0.037500, 0.042500, 0.020000
+#*# 	  0.062500, -0.003750, 0.006250
+#*# 	  -0.005000, 0.000000, 0.011250
+#*# 	  0.017500, -2.542500, -2.540000
 #*# tension = 0.2
 #*# min_x = 15.0
 #*# algo = lagrange
 #*# y_count = 3
 #*# mesh_y_pps = 2
-#*# min_y = 30.0
+#*# min_y = 25.0
 #*# x_count = 3
-#*# max_y = 130.0
+#*# max_y = 135.0
 #*# mesh_x_pps = 2
-#*# max_x = 145.0
+#*# max_x = 143.0
 #*#
 #*# [input_shaper]
-#*# shaper_type_x = zv
-#*# shaper_freq_x = 84.8
-#*# shaper_type_y = mzv
-#*# shaper_freq_y = 66.0
+#*# shaper_type_x = mzv
+#*# shaper_freq_x = 90.8
+#*# shaper_type_y = zv
+#*# shaper_freq_y = 67.8
