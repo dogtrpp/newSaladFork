@@ -1,0 +1,1054 @@
+=============== Log rollover at Sat Dec 31 11:25:39 2022 ===============
+Starting Klippy...
+Args: ['/home/biqu/klipper/klippy/klippy.py', '/home/biqu/printer_data/config/printer.cfg', '-I', '/home/biqu/printer_data/comms/klippy.serial', '-l', '/home/biqu/printer_data/logs/klippy.log', '-a', '/home/biqu/printer_data/comms/klippy.sock']
+Git version: 'v0.11.0-40-gaac613bf'
+CPU: 4 core ?
+Python: '2.7.18 (default, Jul 14 2021, 08:11:37) \n[GCC 10.2.1 20210110]'
+Start printer at Sat Dec 31 11:26:09 2022 (1672514769.8 55.9)
+===== Config file =====
+[virtual_sdcard]
+path = /home/biqu/printer_data/gcodes
+on_error_gcode = 
+	CANCEL_PRINT
+
+[display_status]
+
+[gcode_macro CANCEL_PRINT]
+description = Cancel the actual running print
+rename_existing = CANCEL_PRINT_BASE
+variable_park = True
+gcode = 
+	{% if printer.pause_resume.is_paused|lower == 'false' and park|lower == 'true'%}
+	_TOOLHEAD_PARK_PAUSE_CANCEL
+	{% endif %}
+	TURN_OFF_HEATERS
+	M106 S0
+	CANCEL_PRINT_BASE
+
+[gcode_macro PAUSE]
+description = Pause the actual running print
+rename_existing = PAUSE_BASE
+gcode = 
+	PAUSE_BASE
+	_TOOLHEAD_PARK_PAUSE_CANCEL
+
+[gcode_macro RESUME]
+description = Resume the actual running print
+rename_existing = RESUME_BASE
+gcode = 
+	{% set extrude = printer['gcode_macro _TOOLHEAD_PARK_PAUSE_CANCEL'].extrude %}
+	{% if 'VELOCITY' in params|upper %}
+	{% set get_params = ('VELOCITY=' + params.VELOCITY)  %}
+	{%else %}
+	{% set get_params = "" %}
+	{% endif %}
+	{% if printer.extruder.can_extrude|lower == 'true' %}
+	M83
+	G1 E{extrude} F2100
+	{% if printer.gcode_move.absolute_extrude |lower == 'true' %} M82 {% endif %}
+	{% else %}
+	{action_respond_info("Extruder not hot enough")}
+	{% endif %}
+	RESUME_BASE {get_params}
+
+[gcode_macro _TOOLHEAD_PARK_PAUSE_CANCEL]
+description = Helper: park toolhead used in PAUSE and CANCEL_PRINT
+variable_extrude = 1.0
+gcode = 
+	{% set x_park = printer.toolhead.axis_maximum.x|float - 5.0 %}
+	{% set y_park = printer.toolhead.axis_maximum.y|float - 5.0 %}
+	{% set z_park_delta = 2.0 %}
+	{% set max_z = printer.toolhead.axis_maximum.z|float %}
+	{% set act_z = printer.toolhead.position.z|float %}
+	{% if act_z < (max_z - z_park_delta) %}
+	{% set z_safe = z_park_delta %}
+	{% else %}
+	{% set z_safe = max_z - act_z %}
+	{% endif %}
+	{% if printer.extruder.can_extrude|lower == 'true' %}
+	M83
+	G1 E-{extrude} F2100
+	{% if printer.gcode_move.absolute_extrude |lower == 'true' %} M82 {% endif %}
+	{% else %}
+	{action_respond_info("Extruder not hot enough")}
+	{% endif %}
+	{% if "xyz" in printer.toolhead.homed_axes %}
+	G91
+	G1 Z{z_safe} F900
+	G90
+	G1 X{x_park} Y{y_park} F6000
+	{% if printer.gcode_move.absolute_coordinates|lower == 'false' %} G91 {% endif %}
+	{% else %}
+	{action_respond_info("Printer not homed")}
+	{% endif %}
+
+[gcode_macro _User_Variables]
+variable_verbose = True
+variable_travel_speed = 200
+variable_dock_speed = 50
+variable_release_speed = 75
+variable_z_drop_speed = 10
+variable_safe_z = 25
+variable_enable_z_hop = True
+variable_max_bed_y = 160
+variable_max_bed_x = 160
+variable_z_endstop_x = 100
+variable_z_endstop_y = 170
+variable_docklocation_x = 16
+variable_docklocation_y = 161
+variable_docklocation_z = -128
+variable_dockmove_x = 40
+variable_dockmove_y = 0
+variable_dockmove_z = 0
+variable_attachmove_x = 0
+variable_attachmove_y = 30
+variable_attachmove_z = 0
+variable_umbilical = False
+variable_umbilical_x = 15
+variable_umbilical_y = 15
+variable_park_toolhead = False
+variable_parkposition_x = 75
+variable_parkposition_y = 75
+variable_parkposition_z = 30
+variable_version = 1
+gcode = 
+	{% set Mx = printer['configfile'].config["stepper_x"]["position_max"]|float %}
+	{% set My = printer['configfile'].config["stepper_y"]["position_max"]|float %}
+	{% set Ox = printer['configfile'].config["probe"]["x_offset"]|float %}
+	{% set Oy = printer['configfile'].config["probe"]["y_offset"]|float %}
+	{% set Oz = printer['configfile'].config["probe"]["z_offset"]|float %}
+	{% if docklocation_z == 0 %}
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=docklocation_z VALUE={ home_z_height }
+	{% endif %}
+	{% if z_endstop_x != 0 or z_endstop_y != 0 %}
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=z_endstop_x VALUE={ z_endstop_x }
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=z_endstop_y VALUE={ z_endstop_y }
+	{% else %}
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=z_endstop_x VALUE={ (Mx * 0.5) - Ox }
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=z_endstop_y VALUE={ (My * 0.5) - Oy }
+	{% endif %}
+
+[gcode_macro _Probe_Variables]
+variable_probe_attached = False
+variable_probe_state = False
+variable_probe_lock = False
+variable_z_endstop_x = 0
+variable_z_endstop_y = 0
+gcode = 
+
+[gcode_macro _klicky_check_variables_version]
+gcode = 
+	{% set version = printer["gcode_macro _User_Variables"].version|default(0) %}
+	{% if version != 1 %}
+	{ action_raise_error("Please update your klicky variables, there are some functionality changes") }
+	{% endif %}
+
+[gcode_macro _exit_point]
+gcode = 
+	{% set function  = 'pre_' ~ params.FUNCTION %}
+	{% set move  = params.MOVE|default(0) %}
+	M400
+	RESTORE_GCODE_STATE NAME={function} MOVE={move}
+
+[gcode_macro _entry_point]
+gcode = 
+	{% set function  = 'pre_' ~ params.FUNCTION %}
+	M400
+	SAVE_GCODE_STATE NAME={function}
+	SET_GCODE_OFFSET Z=0
+	G90
+
+[gcode_macro _Homing_Variables]
+gcode = 
+	{% set reset  = params.RESET|default(0) %}
+	{% if reset %}
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=probe_lock VALUE={ False }
+	{% endif %}
+
+[gcode_macro Attach_Probe_Lock]
+description = Attaches Klicky Probe, can only be docked after unlocking
+gcode = 
+	Attach_Probe
+	_Probe_Lock
+
+[gcode_macro Dock_Probe_Unlock]
+description = Docks Klicky Probe even if it was locked
+gcode = 
+	_Probe_Unlock
+	Dock_Probe
+
+[gcode_macro _Probe_Unlock]
+description = Unlocks Klicky Probe state
+gcode = 
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=probe_lock VALUE={ False }
+
+[gcode_macro _Probe_Lock]
+description = Locks Klicky Probe state
+gcode = 
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=probe_lock VALUE={ True }
+
+[gcode_macro Attach_Probe]
+description = Attaches Klicky Probe
+gcode = 
+	{% set goback  = params.BACK|default(0) %}
+	{% set probe_attached = printer["gcode_macro _Probe_Variables"].probe_attached %}
+	{% set probe_lock = printer["gcode_macro _Probe_Variables"].probe_lock %}
+	{% set verbose = printer["gcode_macro _User_Variables"].verbose %}
+	{% set dockmove_x = printer["gcode_macro _User_Variables"].dockmove_x|default(0) %}
+	{% set dockmove_y = printer["gcode_macro _User_Variables"].dockmove_y|default(0) %}
+	{% set dockmove_z = printer["gcode_macro _User_Variables"].dockmove_z|default(0) %}
+	{% set docklocation_x = printer["gcode_macro _User_Variables"].docklocation_x %}
+	{% set docklocation_y = printer["gcode_macro _User_Variables"].docklocation_y %}
+	{% set docklocation_z = printer["gcode_macro _User_Variables"].docklocation_z %}
+	{% set attachmove_x = printer["gcode_macro _User_Variables"].attachmove_x|default(0) %}
+	{% set attachmove_y = printer["gcode_macro _User_Variables"].attachmove_y|default(0) %}
+	{% set attachmove_z = printer["gcode_macro _User_Variables"].attachmove_z|default(0) %}
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z %}
+	{% set enable_z_hop = printer["gcode_macro _User_Variables"].enable_z_hop %}
+	{% set travel_feedrate = printer["gcode_macro _User_Variables"].travel_speed * 60 %}
+	{% set dock_feedrate = printer["gcode_macro _User_Variables"].dock_speed * 60 %}
+	{% set release_feedrate = printer["gcode_macro _User_Variables"].release_speed * 60 %}
+	{% set z_drop_feedrate = printer["gcode_macro _User_Variables"].z_drop_speed * 60 %}
+	_entry_point function=Attach_Probe
+	{% if dockmove_x == dockmove_y == dockmove_z == 0 %}
+	{ action_raise_error("No dockmove location!! To restore old behavior place 40 in dockmove_x") }
+	{% endif %}
+	{% if attachmove_x == attachmove_y == attachmove_z == 0 %}
+	{ action_raise_error("No attachmove location!!  To restore old behavior place dockarmslenght value in dockmove_x") }
+	{% endif %}
+	{% if not 'xy' in printer.toolhead.homed_axes %}
+	{ action_raise_error("Must Home X and Y Axis First!") }
+	{% elif not probe_attached and not probe_lock %}
+	{% if verbose %}
+	{ action_respond_info("Attaching Probe") }
+	{% endif %}
+	{% if not 'z' in printer.toolhead.homed_axes %}
+	{% if verbose %}
+	{ action_respond_info("Resetting Z position to zero") }
+	{% endif %}
+	SET_KINEMATIC_POSITION Z=0
+	{% if not enable_z_hop %}
+	{% set safe_z = 0 %}
+	{% endif %}
+	{% endif %}
+	{% if printer.toolhead.position.z < safe_z %}
+	{% if verbose %}
+	{ action_respond_info("moving to a safe Z distance") }
+	{% endif %}
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% endif %}
+	{% if not 'z' in printer.toolhead.homed_axes %}
+	{% if verbose %}
+	{ action_respond_info("Resetting Z position to zero") }
+	{% endif %}
+	SET_KINEMATIC_POSITION Z=0
+	{% endif %}
+	{% if printer.toolhead.position.z < safe_z %}
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% endif %}
+	_Umbilical_Path
+	_entry_point function=Attach_Probe_intern
+	G0 X{docklocation_x|int - attachmove_x|int} Y{docklocation_y|int - attachmove_y|int} F{travel_feedrate}
+	{% if docklocation_z != -128 %}
+	G0 Z{docklocation_z|int - attachmove_z|int} F{dock_feedrate}
+	{% endif %}
+	{% if docklocation_z != -128 %}
+	G0 Z{docklocation_z} F{dock_feedrate}
+	{% endif %}
+	G0 X{docklocation_x} Y{docklocation_y} F{dock_feedrate}
+	{% if docklocation_z != -128 %}
+	G0 Z{docklocation_z|int - attachmove_z|int} F{z_drop_feedrate}
+	{% endif %}
+	G0 X{docklocation_x|int - attachmove_x|int} Y{docklocation_y|int - attachmove_y|int} F{release_feedrate}
+	{% if printer.toolhead.position.z < safe_z %}
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% endif %}
+	_Park_Toolhead
+	_CheckProbe action=attach
+	_exit_point function=Attach_Probe_intern move={goback}
+	{% elif probe_lock %}
+	{% if verbose %}
+	{ action_respond_info("Probe locked!") }
+	{% endif %}
+	_CheckProbe action=query
+	{% else %}
+	{% if verbose %}
+	{ action_respond_info("Probe already attached!") }
+	{% endif %}
+	_CheckProbe action=query
+	{% endif %}
+	_exit_point function=Attach_Probe move={goback}
+
+[gcode_macro Dock_Probe]
+description = Docks Klicky Probe
+gcode = 
+	{% set goback  = params.back|default(0) %}
+	{% set probe_attached = printer["gcode_macro _Probe_Variables"].probe_attached %}
+	{% set probe_lock = printer["gcode_macro _Probe_Variables"].probe_lock %}
+	{% set verbose = printer["gcode_macro _User_Variables"].verbose %}
+	{% set dockmove_x = printer["gcode_macro _User_Variables"].dockmove_x|default(0) %}
+	{% set dockmove_y = printer["gcode_macro _User_Variables"].dockmove_y|default(0) %}
+	{% set dockmove_z = printer["gcode_macro _User_Variables"].dockmove_z|default(0) %}
+	{% set docklocation_x = printer["gcode_macro _User_Variables"].docklocation_x %}
+	{% set docklocation_y = printer["gcode_macro _User_Variables"].docklocation_y %}
+	{% set docklocation_z = printer["gcode_macro _User_Variables"].docklocation_z %}
+	{% set attachmove_x = printer["gcode_macro _User_Variables"].attachmove_x|default(0) %}
+	{% set attachmove_y = printer["gcode_macro _User_Variables"].attachmove_y|default(0) %}
+	{% set attachmove_z = printer["gcode_macro _User_Variables"].attachmove_z|default(0) %}
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z|float %}
+	{% set travel_feedrate = printer["gcode_macro _User_Variables"].travel_speed * 60 %}
+	{% set dock_feedrate = printer["gcode_macro _User_Variables"].dock_speed * 60 %}
+	{% set release_feedrate = printer["gcode_macro _User_Variables"].release_speed * 60 %}
+	{% set z_drop_feedrate = printer["gcode_macro _User_Variables"].z_drop_speed * 60 %}
+	{% if dockmove_x == dockmove_y == dockmove_z == 0 %}
+	{ action_raise_error("No dockmove location!! To restore old behavior place 40 in dockmove_x") }
+	{% endif %}
+	{% if attachmove_x == attachmove_y == attachmove_z == 0 %}
+	{ action_raise_error("No attachmove location!!  To restore old behavior place dockarmslenght value in dockmove_x") }
+	{% endif %}
+	{% if not 'xyz' in printer.toolhead.homed_axes %}
+	{ action_raise_error("Must Home X, Y and Z Axis First!") }
+	{% endif %}
+	_entry_point function=Dock_Probe
+	{% if probe_attached and not probe_lock %}
+	{% if verbose %}
+	{ action_respond_info("Docking Probe") }
+	{% endif %}
+	{% if printer.toolhead.position.z < safe_z %}
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% endif %}
+	_Umbilical_Path
+	G0 X{docklocation_x|int - attachmove_x|int} Y{docklocation_y|int - attachmove_y|int} F{travel_feedrate}
+	{% if docklocation_z != -128 %}
+	G0 Z{docklocation_z|int - attachmove_z|int} F{dock_feedrate}
+	{% endif %}
+	G0 X{docklocation_x} Y{docklocation_y} F{dock_feedrate}
+	{% if docklocation_z != -128 %}
+	G0 Z{docklocation_z} F{dock_feedrate}
+	{% endif %}
+	{% if docklocation_z != -128 %}
+	G0 Z{docklocation_z|int + dockmove_z|int} F{release_feedrate}
+	{% endif %}
+	G0 X{docklocation_x|int + dockmove_x|int} Y{docklocation_y|int + dockmove_y|int} F{release_feedrate}
+	{% if printer.toolhead.position.z < safe_z %}
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% endif %}
+	_Park_Toolhead
+	G4 P1000
+	_CheckProbe action=dock
+	{% elif probe_lock %}
+	{% if verbose %}
+	{ action_respond_info("Probe locked") }
+	{% endif %}
+	_CheckProbe action=query
+	{% else %}
+	{% if verbose %}
+	{ action_respond_info("Probe already docked") }
+	{% endif %}
+	_CheckProbe action=query
+	{% endif %}
+	_exit_point function=Dock_Probe move={goback}
+
+[gcode_macro PROBE_CALIBRATE]
+rename_existing = _PROBE_CALIBRATE
+description = Calibrate the probes z_offset with klicky automount
+gcode = 
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z|float %}
+	{% set z_drop_feedrate = printer["gcode_macro _User_Variables"].z_drop_speed * 60 %}
+	{% set travel_feedrate = printer["gcode_macro _User_Variables"].travel_speed %}
+	{% set max_x = printer["gcode_macro _User_Variables"].max_bed_x %}
+	{% set max_y = printer["gcode_macro _User_Variables"].max_bed_y %}
+	{% set probe_offset_x = printer['configfile'].config["probe"]["x_offset"]|float %}
+	{% set probe_offset_y = printer['configfile'].config["probe"]["y_offset"]|float %}
+	{% if not 'xyz' in printer.toolhead.homed_axes %}
+	{ action_raise_error("Must Home X, Y and Z Axis First!") }
+	{% endif %}
+	{% if printer['gcode_move'].position.y > (max_y - probe_offset_y)
+	or printer['gcode_move'].position.y < probe_offset_y
+	or printer['gcode_move'].position.x > (max_x - probe_offset_x)
+	or printer['gcode_move'].position.x < probe_offset_x %}
+	{ action_raise_error("Must perform PROBE_CALIBRATE with the probe above the BED!") }
+	{% endif%}
+	_entry_point function=PROBE_CALIBRATE
+	_CheckProbe action=query
+	Attach_Probe back=1
+	_PROBE_CALIBRATE {% for p in params
+	%}{'%s=%s ' % (p, params[p])}{%
+	endfor %}
+	Dock_Probe back=1
+	_exit_point function=PROBE_CALIBRATE move=1
+
+[gcode_macro PROBE_ACCURACY]
+rename_existing = _PROBE_ACCURACY
+description = Probe Z-height accuracy at current XY position with klicky automount
+gcode = 
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z|float %}
+	{% set z_drop_feedrate = printer["gcode_macro _User_Variables"].z_drop_speed * 60 %}
+	{% set travel_feedrate = printer["gcode_macro _User_Variables"].travel_speed %}
+	{% set max_x = printer["gcode_macro _User_Variables"].max_bed_x %}
+	{% set max_y = printer["gcode_macro _User_Variables"].max_bed_y %}
+	{% set probe_offset_x = printer['configfile'].config["probe"]["x_offset"]|float %}
+	{% set probe_offset_y = printer['configfile'].config["probe"]["y_offset"]|float %}
+	{% if not 'xyz' in printer.toolhead.homed_axes %}
+	{ action_raise_error("Must Home X, Y and Z Axis First!") }
+	{% endif %}
+	_entry_point function=PROBE_ACCURACY
+	{% if printer['gcode_move'].position.y > (max_y - probe_offset_y)
+	or printer['gcode_move'].position.y < probe_offset_y
+	or printer['gcode_move'].position.x > (max_x - probe_offset_x)
+	or printer['gcode_move'].position.x < probe_offset_x %}
+	{ action_raise_error("Must perform PROBE_ACCURACY with the probe above the BED!") }
+	{% endif%}
+	_CheckProbe action=query
+	Attach_Probe back=1
+	_PROBE_ACCURACY {% for p in params
+	%}{'%s=%s ' % (p, params[p])}{%
+	endfor %}
+	Dock_Probe back=1
+	_exit_point function=PROBE_ACCURACY move=1
+
+[force_move]
+enable_force_move = True
+
+[homing_override]
+axes = xyz
+gcode = 
+	_User_Variables
+	{% set verbose = printer["gcode_macro _User_Variables"].verbose %}
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z|float %}
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z %}
+	{% set enable_z_hop = printer["gcode_macro _User_Variables"].enable_z_hop %}
+	{% set attachmove_x = printer["gcode_macro _User_Variables"].attachmove_x|default(0) %}
+	{% set attachmove_y = printer["gcode_macro _User_Variables"].attachmove_y|default(0) %}
+	{% set attachmove_z = printer["gcode_macro _User_Variables"].attachmove_z|default(0) %}
+	{% set z_drop_feedrate = printer["gcode_macro _User_Variables"].z_drop_speed * 60 %}
+	_klicky_check_variables_version
+	{% if attachmove_x == attachmove_y == attachmove_z == 0 %}
+	{ action_raise_error("No attachmove location!") }
+	{% endif %}
+	_CheckProbe action=query
+	{% set home_x, home_y, home_z = False, False, False %}
+	{% if not 'X' in params
+	and not 'Y' in params
+	and not 'Z' in params %}
+	{% set home_x, home_y, home_z = True, True, True %}
+	{% else %}
+	{% if 'X' in params %}
+	{% set home_x = True %}
+	{% endif %}
+	{% if 'Y' in params %}
+	{% set home_y = True %}
+	{% endif %}
+	{% if 'Z' in params %}
+	{% set home_z = True %}
+	{% endif %}
+	{% if 'X' in params
+	and 'Y' in params
+	and 'Z' in params %}
+	_Homing_Variables reset=1
+	{% endif %}
+	{% endif %}
+	_entry_point function=homing_override
+	{% if 'z' not in printer.toolhead.homed_axes %}
+	{% if not enable_z_hop %}
+	{% set safe_z = 0 %}
+	{% endif %}
+	{% endif %}
+	{% if home_z %}
+	{% if 'z' in printer.toolhead.homed_axes %}
+	{% if printer.toolhead.position.z < safe_z %}
+	{% if verbose %}
+	{ action_respond_info("Z too low, performing ZHOP") }
+	{% endif %}
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% endif %}
+	{% else %}
+	{% if verbose %}
+	{ action_respond_info("Z not homed, forcing full G28") }
+	{% endif %}
+	SET_KINEMATIC_POSITION X=0 Y=0 Z=0
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% set home_x, home_y, home_z = True, True, True %}
+	{% endif %}
+	{% endif %}
+	{% if attachmove_y == 0 %}
+	{% if home_y %}
+	{% if verbose %}
+	{ action_respond_info("Homing Y") }
+	{% endif %}
+	G28 Y0
+	{% endif %}
+	{% set home_y = False %}
+	{% endif %}
+	{% if home_x %}
+	{% if verbose %}
+	{ action_respond_info("Homing X") }
+	{% endif %}
+	{% if printer["gcode_macro _HOME_X"] is defined %}
+	_HOME_X
+	{% else %}
+	G28 X0
+	{% endif %}
+	{% endif %}
+	{% if home_y %}
+	{% if verbose %}
+	{ action_respond_info("Homing Y") }
+	{% endif %}
+	{% if printer["gcode_macro _HOME_Y"] is defined %}
+	_HOME_Y
+	{% else %}
+	G28 Y0
+	{% endif %}
+	{% endif %}
+	{% if home_z %}
+	{% if verbose %}
+	{ action_respond_info("Homing Z") }
+	{% endif %}
+	{% if printer['configfile'].config["stepper_z"]["endstop_pin"] == 'probe:z_virtual_endstop' %}
+	Attach_Probe
+	{% else %}
+	Dock_Probe
+	{% endif %}
+	_Home_Z
+	{% if printer['configfile'].config["stepper_z"]["endstop_pin"] == 'probe:z_virtual_endstop' %}
+	Dock_Probe
+	{% endif %}
+	{% endif %}
+	_CheckProbe action=query
+	_Park_Toolhead
+	_exit_point function=homing_override
+
+[gcode_macro _Umbilical_Path]
+gcode = 
+	{% set umbilical = printer["gcode_macro _User_Variables"].umbilical %}
+	{% set umbilical_x = printer["gcode_macro _User_Variables"].umbilical_x %}
+	{% set umbilical_y = printer["gcode_macro _User_Variables"].umbilical_y %}
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z|float %}
+	{% set travel_feedrate = printer["gcode_macro _User_Variables"].travel_speed * 60 %}
+	{% if umbilical %}
+	_entry_point function=Umbilical_Path
+	G0 X{umbilical_x} Y{umbilical_y} Z{safe_z} F{travel_feedrate}
+	_exit_point function=Umbilical_Path
+	{% endif %}
+
+[gcode_macro _Home_Z]
+gcode = 
+	{% set z_endstop_x = printer["gcode_macro _Probe_Variables"].z_endstop_x %}
+	{% set z_endstop_y = printer["gcode_macro _Probe_Variables"].z_endstop_y %}
+	{% set safe_z = printer["gcode_macro _User_Variables"].safe_z|float %}
+	{% set travel_feedrate = printer["gcode_macro _User_Variables"].travel_speed * 60 %}
+	{% set z_drop_feedrate = printer["gcode_macro _User_Variables"].z_drop_speed * 60 %}
+	{% set verbose = printer["gcode_macro _User_Variables"].verbose %}
+	_entry_point function=Home_Z
+	{% if not 'xy' in printer.toolhead.homed_axes %}
+	{ action_raise_error("Must Home X and Y Axis First!") }
+	{% else %}
+	{% if not 'z' in printer.toolhead.homed_axes %}
+	{% if verbose %}
+	{ action_respond_info("Resetting Z position to zero") }
+	{% endif %}
+	SET_KINEMATIC_POSITION Z=0
+	{% endif %}
+	G0 X{z_endstop_x} Y{z_endstop_y} F{travel_feedrate}
+	G28 Z0
+	G0 Z{safe_z} F{z_drop_feedrate}
+	{% endif %}
+	_exit_point function=Home_Z
+
+[gcode_macro _CheckProbe]
+variable_probe_state = 0
+gcode = 
+	Query_Probe
+	_SetProbeState action={ ACTION }
+
+[gcode_macro _SetProbeState]
+gcode = 
+	{% set query_probe_triggered = printer.probe.last_query %}
+	{% set action  = params.ACTION|default('') %}
+	{% if query_probe_triggered %}
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=probe_attached VALUE={ False }
+	{% else %}
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=probe_attached VALUE={ True }
+	{% endif %}
+	{% if action == 'query' %}
+	SET_GCODE_VARIABLE MACRO=_Probe_Variables VARIABLE=probe_state VALUE={ query_probe_triggered }
+	{% endif %}
+	{% if not query_probe_triggered and action == 'dock' %}
+	{ action_raise_error("Probe dock failed!") }
+	{% endif %}
+	{% if query_probe_triggered and action == 'attach' %}
+	{ action_raise_error("Probe attach failed!") }
+	{% endif %}
+
+[gcode_macro _Park_Toolhead]
+gcode = 
+	{% set park_toolhead = printer["gcode_macro _User_Variables"].park_toolhead %}
+	{% set parkposition_x = printer["gcode_macro _User_Variables"].parkposition_x %}
+	{% set parkposition_y = printer["gcode_macro _User_Variables"].parkposition_y %}
+	{% set parkposition_z = printer["gcode_macro _User_Variables"].parkposition_z %}
+	{% set travel_feedrate = printer["gcode_macro _User_Variables"].travel_speed * 60 %}
+	{% set verbose = printer["gcode_macro _User_Variables"].verbose %}
+	_entry_point function=Park_Toolhead
+	{% if park_toolhead and 'xyz' in printer.toolhead.homed_axes %}
+	{% if verbose %}
+	{ action_respond_info("Parking Toolhead") }
+	{% endif %}
+	G0 X{parkposition_x} Y{parkposition_y} Z{parkposition_z} F{travel_feedrate}
+	{% endif %}
+	_exit_point function=Park_Toolhead
+
+[gcode_macro Z_TILT_ADJUST]
+rename_existing = _Z_TILT_ADJUST
+description = 
+gcode = 
+	{% set V = printer["gcode_macro _User_Variables"].verbose %}
+	{% if V %}
+	{ action_respond_info("Z Tilt Adjust") }
+	{% endif %}
+	_CheckProbe action=query
+	Attach_Probe
+	_Z_TILT_ADJUST {% for p in params
+	%}{'%s=%s ' % (p, params[p])}{%
+	endfor %}
+	Dock_Probe
+	G28 Z0
+
+[gcode_macro BED_MESH_CALIBRATE]
+rename_existing = _BED_MESH_CALIBRATE
+description = Perform Mesh Bed Leveling with klicky automount
+gcode = 
+	{% set V = printer["gcode_macro _User_Variables"].verbose %}
+	{% if V %}
+	{ action_respond_info("Bed Mesh Calibrate") }
+	{% endif %}
+	_CheckProbe action=query
+	Attach_Probe
+	_BED_MESH_CALIBRATE {% for p in params
+	%}{'%s=%s ' % (p, params[p])}{%
+	endfor %}
+	Dock_Probe
+
+[exclude_object]
+
+[printer]
+kinematics = corexy
+max_velocity = 300
+max_accel = 10000
+max_z_velocity = 10
+max_z_accel = 30
+square_corner_velocity = 5.0
+
+[pause_resume]
+
+[idle_timeout]
+timeout = 1800
+
+[mcu]
+restart_method = command
+serial = /dev/serial/by-id/usb-Klipper_stm32g0b1xx_430036000C504B4633373520-if00
+
+[mcu can0]
+canbus_uuid = 8b807351c67e
+
+[adxl345]
+cs_pin = can0:PB12
+spi_software_sclk_pin = can0:PB10
+spi_software_mosi_pin = can0:PB11
+spi_software_miso_pin = can0:PB2
+axes_map = x,y,z
+
+[input_shaper]
+shaper_type_x = mzv
+shaper_freq_x = 88.4
+shaper_type_y = mzv
+shaper_freq_y = 59.0
+
+[resonance_tester]
+accel_chip = adxl345
+probe_points = 
+	80,80,20
+
+[z_calibration]
+nozzle_xy_position = 100,170
+switch_xy_position = 92,134
+bed_xy_position = 80,80
+switch_offset = 3.2
+start_gcode = ATTACH_PROBE
+end_gcode = DOCK_PROBE
+
+[temperature_sensor CANBOARD]
+sensor_type = temperature_mcu
+sensor_mcu = can0
+
+[temperature_sensor CB1]
+sensor_type = temperature_host
+min_temp = 10
+max_temp = 100
+
+[temperature_sensor MCU_temp]
+sensor_type = temperature_mcu
+min_temp = 0
+max_temp = 100
+
+[stepper_x]
+step_pin = PE2
+dir_pin = PB4
+enable_pin = !PC11
+rotation_distance = 32
+microsteps = 64
+full_steps_per_rotation = 200
+endstop_pin = ^can0:PB6
+position_min = 0
+position_endstop = 160
+position_max = 160
+homing_speed = 75
+homing_retract_dist = 5
+homing_positive_dir = true
+
+[tmc2209 stepper_x]
+uart_pin = PC10
+interpolate = False
+run_current = 1.1
+sense_resistor = 0.110
+
+[stepper_y]
+step_pin = PF12
+dir_pin = PF11
+enable_pin = !PB3
+rotation_distance = 32
+microsteps = 64
+full_steps_per_rotation = 200
+endstop_pin = ^PF3
+position_min = 0
+position_endstop = 172
+position_max = 172
+homing_speed = 75
+homing_retract_dist = 5
+homing_positive_dir = true
+
+[tmc2209 stepper_y]
+uart_pin = PF13
+interpolate = False
+run_current = 1.1
+sense_resistor = 0.110
+
+[stepper_z]
+step_pin = PD7
+dir_pin = !PD6
+enable_pin = !PF10
+rotation_distance = 8
+microsteps = 32
+endstop_pin = ^PF4
+position_max = 150
+position_min = -2.5
+homing_speed = 8.0
+second_homing_speed = 3
+homing_retract_dist = 3
+full_steps_per_rotation = 200
+position_endstop = 3.133
+
+[tmc2209 stepper_z]
+uart_pin = PF9
+interpolate = False
+run_current = 0.7
+sense_resistor = 0.110
+
+[stepper_z1]
+step_pin = PD3
+dir_pin = !PD2
+enable_pin = !PD5
+rotation_distance = 8
+microsteps = 32
+full_steps_per_rotation = 200
+
+[tmc2209 stepper_z1]
+uart_pin = PD4
+interpolate = False
+run_current = 0.7
+sense_resistor = 0.110
+
+[stepper_z2]
+step_pin = PC9
+dir_pin = !PC8
+enable_pin = !PD1
+rotation_distance = 8
+microsteps = 32
+full_steps_per_rotation = 200
+
+[tmc2209 stepper_z2]
+uart_pin = PD0
+interpolate = False
+run_current = 0.7
+sense_resistor = 0.110
+
+[extruder]
+step_pin = can0:PD0
+dir_pin = can0:PD1
+enable_pin = !can0:PD2
+rotation_distance = 5.7
+microsteps = 16
+full_steps_per_rotation = 200
+nozzle_diameter = 0.400
+filament_diameter = 1.75
+heater_pin = can0:PB13
+sensor_type = PT1000
+sensor_pin = can0:PA3
+min_temp = 10
+max_temp = 270
+max_power = 1.0
+min_extrude_temp = 170
+pressure_advance = 0.035
+pressure_advance_smooth_time = 0.040
+max_extrude_cross_section = .740
+control = pid
+pid_kp = 24.193
+pid_ki = 2.179
+pid_kd = 67.136
+
+[tmc2209 extruder]
+uart_pin = can0:PA15
+interpolate = false
+run_current = 0.7
+sense_resistor = 0.110
+
+[heater_bed]
+heater_pin = PB7
+sensor_type = Generic 3950
+sensor_pin = PA0
+max_power = 0.6
+min_temp = 0
+max_temp = 120
+control = pid
+pid_kp = 41.161
+pid_ki = 1.358
+pid_kd = 311.792
+
+[probe]
+pin = can0:PB8
+x_offset = 0
+y_offset = 25.0
+z_offset = 5.350
+speed = 5
+samples = 3
+samples_result = median
+sample_retract_dist = 3.0
+samples_tolerance = 0.01
+samples_tolerance_retries = 5
+
+[fan]
+pin = can0:PA1
+kick_start_time = 0.5
+off_below = 0.10
+
+[heater_fan hotend_fan]
+pin = can0:PA0
+max_power = 1.0
+kick_start_time = 0.5
+heater = extruder
+heater_temp = 50.0
+
+[controller_fan controller_fan]
+pin = PE6
+kick_start_time = 0.5
+heater = heater_bed
+
+[z_tilt]
+z_positions = 
+	-50, -13
+	75, 197
+	200, -13
+points = 
+	20, 0
+	80, 105
+	140, 0
+speed = 150
+horizontal_move_z = 25
+retries = 5
+retry_tolerance = 0.0075
+
+[bed_mesh]
+speed = 150
+horizontal_move_z = 25
+mesh_min = 
+	15, 30
+mesh_max = 
+	145, 130
+probe_count = 
+	3,3
+relative_reference_index = 
+	4
+
+[board_pins]
+aliases = 
+	EXP1_1=PD6,  EXP1_3=PB9,  EXP1_5=PA15, EXP1_7=PA9,   EXP1_9=<GND>,
+	EXP1_2=PB8,  EXP1_4=PC3,  EXP1_6=PA10, EXP1_8=PB5,   EXP1_10=<5V>,
+	EXP2_1=PB14, EXP2_3=PC11, EXP2_5=PC12, EXP2_7=PC13,  EXP2_9=<GND>,
+	EXP2_2=PB13, EXP2_4=PA8,  EXP2_6=PB15, EXP2_8=<RST>, EXP2_10=<NC>
+
+[gcode_macro PRINT_START]
+gcode = 
+	{% set BED = params.BED|default(70)|float %}
+	{% set BED_TEMP = params.BED_TEMP|default(0)|float %}
+	{% set EXTRUDER = params.EXTRUDER|default(210)|float %}
+	{% set EXTRUDER_TEMP = params.EXTRUDER_TEMP|default(0)|float %}
+	{% set STANDBY = params.STANDBY|default(0)|float %}
+	{% set STANDBY_TEMP = params.STANDBY_TEMP|default(180)|float %}
+	{% if (EXTRUDER_TEMP > 0) %}
+	{% set EXTRUDER = EXTRUDER_TEMP %}
+	{% endif %}
+	{% if (BED_TEMP > 0) %}
+	{% set BED = BED_TEMP %}
+	{% endif %}
+	G92 E0
+	M117 Heating
+	SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET={BED}
+	SET_HEATER_TEMPERATURE HEATER=extruder TARGET={STANDBY}
+	TEMPERATURE_WAIT SENSOR=heater_bed MINIMUM={BED}
+	M117 Homing
+	G90
+	G28
+	G29
+	G1 X15 Y5 Z10 F6000
+	SET_HEATER_TEMPERATURE HEATER=extruder TARGET={EXTRUDER}
+	TEMPERATURE_WAIT SENSOR=extruder MINIMUM={EXTRUDER}
+	CALIBRATE_Z
+	G1 E10.0 F1800
+	PRIME_LINE
+	M117 Printing...
+
+[gcode_macro G29]
+gcode = 
+	Z_TILT_ADJUST
+	G1 Z10 F600
+	BED_MESH_CLEAR
+	BED_MESH_CALIBRATE
+	BED_MESH_PROFILE LOAD=default
+
+[gcode_macro PRIME_LINE]
+gcode = 
+	M117 Prime Line
+	G92 E0 ;Reset Extruder
+	G1 Z2.0 F3000 ;Move Z Axis up
+	G1 X7.1 Y30 Z0.28 F5000.0 ;Move to start position
+	G1 X7.1 Y100.0 Z0.28 F1500.0 E15 ;Draw the first line
+	G1 X7.4 Y100.0 Z0.28 F5000.0 ;Move to side a little
+	G1 X7.4 Y50 Z0.28 F1500.0 E30 ;Draw the second line
+	G92 E0 ;Reset Extruder
+	G1 Z2.0 F3000 ;Move Z Axis up
+
+[gcode_macro PRINT_END]
+gcode = 
+	STATUS_READY
+	G91
+	G1 X-2 Y-2 E-3 F300
+	G1 Z10 F3000
+	G1 E0.5 F1000
+	G1 E-0.5 F1000
+	G1 E1.0 F1000
+	G1 E-1.0 F1000
+	G1 E1.5 F1000
+	G1 E-1.5 F1000
+	G1 E2.0 F1000
+	G1 E-5.0 F1000
+	G1 X5 Y5 F6000
+	G90
+	G1 X{printer.toolhead.axis_maximum.x} Y{printer.toolhead.axis_maximum.y} F19500.0  					; park nozzle at rear
+	M106 S0
+	M104 S0
+	M140 S0
+	M84 X Y E
+	M117 Complete!
+
+[gcode_macro M600]
+gcode = 
+	{% set X = params.X|default(50)|float %}
+	{% set Y = params.Y|default(0)|float %}
+	{% set Z = params.Z|default(10)|float %}
+	SAVE_GCODE_STATE NAME=M600_state
+	PAUSE
+	G91
+	G1 E-.8 F2700
+	G1 Z{Z}
+	G90
+	G1 X{X} Y{Y} F3000
+	G91
+	G1 E-50 F1000
+	RESTORE_GCODE_STATE NAME=M600_state
+
+[gcode_macro PARK]
+gcode = 
+	G1 X125 Y200.0 Z200.0 F4000
+
+[gcode_macro FILAMENT_LOAD]
+gcode = 
+	M83 ; set e to relative positioning
+	G92 E0.0
+	G1 E80 F500 ; Initially go fast
+	G92 E0.0
+	G1 E20 F100 ; then go slow
+	G92 E0.0
+
+[gcode_macro FILAMENT_UNLOAD]
+gcode = 
+	M83 ; set e to relative positioning
+	G1 E0.5 F1000
+	G1 E-0.5 F1000
+	G1 E1.0 F1000
+	G1 E-1.0 F1000
+	G1 E1.5 F1000
+	G1 E-1.5 F1000
+	G1 E2.0 F1000
+	G1 E-100 F500 ;fully unload
+	G92 E0.0
+
+[bed_mesh default]
+version = 1
+points = 
+	0.058750, -0.003750, 0.012500
+	0.001250, 0.000000, 0.021250
+	-0.000000, 0.012500, 0.053750
+tension = 0.2
+min_x = 15.0
+algo = lagrange
+y_count = 3
+mesh_y_pps = 2
+min_y = 30.0
+x_count = 3
+max_y = 130.0
+mesh_x_pps = 2
+max_x = 145.0
+=======================
+Extruder max_extrude_ratio=0.307656
+mcu 'mcu': Starting serial connect
+webhooks client 281473267069488: New connection
+webhooks client 281473267069488: Client info {'program': 'Moonraker', 'version': 'v0.7.1-780-gdde9bcc'}
+Loaded MCU 'mcu' 105 commands (v0.10.0-615-g96ea871b / gcc: (15:8-2019-q3-1+b1) 8.3.1 20190703 (release) [gcc-8-branch revision 273027] binutils: (2.35.2-2+14+b2) 2.35.2)
+MCU 'mcu' config: BUS_PINS_i2c1_PB6_PB7=PB6,PB7 BUS_PINS_spi2a=PC2,PC3,PB10 RESERVE_PINS_crystal=PF0,PF1 RESERVE_PINS_USB=PA11,PA12 CLOCK_FREQ=64000000 BUS_PINS_i2c1_PB8_PB9=PB8,PB9 BUS_PINS_spi1a=PB4,PB5,PB3 STATS_SUMSQ_BASE=256 BUS_PINS_i2c1_PA9_PA10=PA9,PA10 BUS_PINS_i2c2_PB10_PB11=PB10,PB11 STEPPER_BOTH_EDGE=1 ADC_MAX=4095 BUS_PINS_spi3=PB4,PB5,PB3 BUS_PINS_spi2=PB14,PB15,PB13 BUS_PINS_spi1=PA6,PA7,PA5 BUS_PINS_i2c2_PB13_PB14=PB13,PB14 PWM_MAX=255 MCU=stm32g0b1xx BUS_PINS_i2c3_PB3_PB4=PB3,PB4
+mcu 'can0': Starting CAN connect
+Created a socket
+Loaded MCU 'can0' 107 commands (v0.10.0-620-g11dd273b / gcc: (15:8-2019-q3-1+b1) 8.3.1 20190703 (release) [gcc-8-branch revision 273027] binutils: (2.35.2-2+14+b2) 2.35.2)
+MCU 'can0' config: BUS_PINS_i2c1_PB6_PB7=PB6,PB7 BUS_PINS_spi2a=PC2,PC3,PB10 CANBUS_FREQUENCY=1000000 RESERVE_PINS_crystal=PF0,PF1 CLOCK_FREQ=64000000 BUS_PINS_i2c1_PB8_PB9=PB8,PB9 BUS_PINS_spi1a=PB4,PB5,PB3 STATS_SUMSQ_BASE=256 RECEIVE_WINDOW=192 BUS_PINS_i2c1_PA9_PA10=PA9,PA10 BUS_PINS_i2c2_PB10_PB11=PB10,PB11 RESERVE_PINS_CAN=PB0,PB1 STEPPER_BOTH_EDGE=1 ADC_MAX=4095 BUS_PINS_spi3=PB4,PB5,PB3 BUS_PINS_spi2=PB14,PB15,PB13 BUS_PINS_spi1=PA6,PA7,PA5 BUS_PINS_i2c2_PB13_PB14=PB13,PB14 PWM_MAX=255 MCU=stm32g0b1xx BUS_PINS_i2c3_PB3_PB4=PB3,PB4
+mcu_temperature 'can0' nominal base=-272.325581 slope=1309.447674
+mcu_temperature 'mcu' nominal base=-272.332362 slope=1313.265306
+Sending MCU 'mcu' printer configuration...
+Configured MCU 'mcu' (1024 moves)
+Sending MCU 'can0' printer configuration...
+Configured MCU 'can0' (1024 moves)
+Starting heater checks for heater_bed
+bed_mesh: generated points
+Index |  Tool Adjusted  |   Probe
+  0   | (15.0, 5.0)     | (15.0, 30.0)
+  1   | (80.0, 5.0)     | (80.0, 30.0)
+  2   | (145.0, 5.0)    | (145.0, 30.0)
+  3   | (145.0, 55.0)   | (145.0, 80.0)
+  4   | (80.0, 55.0)    | (80.0, 80.0)
+  5   | (15.0, 55.0)    | (15.0, 80.0)
+  6   | (15.0, 105.0)   | (15.0, 130.0)
+  7   | (80.0, 105.0)   | (80.0, 130.0)
+  8   | (145.0, 105.0)  | (145.0, 130.0)
+bed_mesh: relative_reference_index 4 is (80.00, 80.00)
+Starting heater checks for extruder
+webhooks: registering remote method 'shutdown_machine' for connection id: 281473267069488
+webhooks: registering remote method 'reboot_machine' for connection id: 281473267069488
+webhooks: registering remote method 'pause_job_queue' for connection id: 281473267069488
+webhooks: registering remote method 'start_job_queue' for connection id: 281473267069488
